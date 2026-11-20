@@ -2,13 +2,10 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuario.js';
-import { checkChangePassToken, checkOTP, sendEmail } from '../services/mailer.js';
 import RefreshToken from '../models/refreshToken.js';
-import { hashRefreshToken } from '../services/autenticaRota.js';
+import { hashRefreshToken, hashSenha } from '../services/auth.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SENHA_MINIMA = 6;
-const SENHA_MAXIMA = 72; // o bcrypt só considera os 72 primeiros caracteres
 
 // POST /usuarios
 async function cadastrar(req, res) {
@@ -139,82 +136,9 @@ async function logar(req, res) {
   }
 }
 
-async function enviarEmail(req, res) {
-  try {
-    const { email } = req.body
-    const usuarioEncontrado = await Usuario.findOne({ email: email })
-    if(!usuarioEncontrado){
-      return res.sendStatus(200)
-    }
-    await sendEmail(email)
-    res.sendStatus(200)
-  } catch(err) {
-    res.status(500).json({ error: 'Erro ao enviar o email' })
-  } 
-}
-
-function checarOTP(req, res) {
-  try{
-    const { email, OTP } = req.body
-    const resultado = checkOTP(email, OTP)
-    if(resultado.ok){
-      res.status(200).json({
-        token: resultado.token
-      })
-    }else{
-      res.status(500).json({
-        error: 'Código enviado incorreto'
-      })
-    }
-  }catch(err){
-    res.status(500).json({
-      error: 'Erro ao verificar código'
-    })
-  }
-}
-
-async function mudarSenha(req, res) {
-  try{
-    const { email, token, novaSenha } = req.body
-    const resultado = checkChangePassToken(email, token)
-    if(resultado.ok){
-      const senhaHash = await hashSenha(novaSenha)
-      if(senhaHash.error){
-        return res.status(500).json({error: senhaHash.error})
-      }
-      await Usuario.findOneAndUpdate({ email: email }, { senha: senhaHash })
-      return res.sendStatus(200)
-    }
-    return res.status(500).json({
-      error: 'Acesso a mudança de senha negado'
-    })
-  }catch(err) {
-    // TODO: Corrigir erro q por enquanto nn sei qual é, dps eu vejo :P
-    // NOTE: Não posso fazer mais isso, já não lembro qual o erro e nem se ja arrumei, aff
-    console.log(err)
-    res.status(500).json({
-      error: 'Erro durante mudança de senha'
-    })
-  }
-}
-
-async function hashSenha(senha) {
-  // senha: obrigatória, não vazia e com tamanho válido
-  if (typeof senha !== 'string' || !senha.trim()) {
-    return { error: 'O campo "senha" é obrigatório e não pode ser vazio' }
-  }
-  if (senha.length < SENHA_MINIMA || senha.length > SENHA_MAXIMA) {
-    return { error: `A senha deve ter entre ${SENHA_MINIMA} e ${SENHA_MAXIMA} caracteres`,}
-  }
-  return await bcrypt.hash(senha, 10);
-}
-
 
 export { 
   cadastrar,
-  logar,
-  enviarEmail,
-  checarOTP,
-  mudarSenha
+  logar
 };
 
