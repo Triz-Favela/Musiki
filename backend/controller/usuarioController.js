@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuario.js';
 import { checkChangePassToken, checkOTP, sendEmail } from '../services/mailer.js';
 import RefreshToken from '../models/refreshToken.js';
+import { hashRefreshToken } from '../services/autenticaRota.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SENHA_MINIMA = 6;
@@ -208,12 +209,6 @@ async function hashSenha(senha) {
   return await bcrypt.hash(senha, 10);
 }
 
-export function hashRefreshToken(token) {
-  return crypto
-    .createHmac('sha256', process.env.REFRESH_TOKEN_HASH_SECRET)
-    .update(token)
-    .digest('hex');
-}
 
 export { 
   cadastrar,
