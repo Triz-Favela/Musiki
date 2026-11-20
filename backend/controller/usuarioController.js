@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuario.js';
 import { checkChangePassToken, checkOTP, sendEmail } from '../services/mailer.js';
+import RefreshToken from '../models/refreshToken.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SENHA_MINIMA = 6;
@@ -46,7 +48,6 @@ async function cadastrar(req, res) {
       return res.status(409).json({ error: 'Esse email já está em uso' });
     }
 
-    // criptografa a senha (10 = custo do bcrypt)
     const senhaHash = await hashSenha(senha)
 
     if(senhaHash.error){
@@ -107,14 +108,21 @@ async function logar(req, res) {
       return res.status(400).json({ error: 'Senha ou usuário incorreto'})
     }
 
+    const refreshToken = crypto.randomBytes(32).toString('base64url')
     
-    const token = jwt.sign(
-      { id: usuarioEncontrado._id.toString(), username: usuarioEncontrado.username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const refreshTokenHash = hashRefreshToken(refreshToken)
+    await RefreshToken.create({
+      userID: usuarioEncontrado._id,
+      tokenHash: refreshTokenHash,
+    })
 
-    res.status(201).json({ token, username: usuarioEncontrado.username });
+    const accessToken = jwt.sign(
+      { id: usuarioEncontrado._id.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+
+    res.status(201).json({ refreshToken, accessToken, username: usuarioEncontrado.username });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'Username ou email já está em uso' });
@@ -190,6 +198,13 @@ async function hashSenha(senha) {
     return { error: `A senha deve ter entre ${SENHA_MINIMA} e ${SENHA_MAXIMA} caracteres`,}
   }
   return await bcrypt.hash(senha, 10);
+}
+
+export function hashRefreshToken(token) {
+  return crypto
+    .createHmac('sha256', process.env.REFRESH_TOKEN_HASH_SECRET)
+    .update(token)
+    .digest('hex');
 }
 
 export { 
