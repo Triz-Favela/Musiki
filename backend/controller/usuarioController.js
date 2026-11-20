@@ -57,16 +57,23 @@ async function cadastrar(req, res) {
     const dados = { username: usernameLimpo, senha: senhaHash };
     if (emailLimpo) dados.email = emailLimpo;
 
-    const novo = await Usuario.create(dados);
+    const novoUsuario = await Usuario.create(dados);
 
-    // o token leva só o id e o username, nunca a senha
-    const token = jwt.sign(
-      { id: novo._id.toString(), username: novo.username },
+    const refreshToken = crypto.randomBytes(32).toString('base64url')
+    
+    const refreshTokenHash = hashRefreshToken(refreshToken)
+    await RefreshToken.create({
+      userID: novoUsuario._id,
+      tokenHash: refreshTokenHash,
+    })
+
+    const accessToken = jwt.sign(
+      { id: novoUsuario._id.toString() },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+      { expiresIn: '15m' }
+    )
 
-    res.status(201).json({ token, username: novo.username });
+    res.status(201).json({ refreshToken, accessToken, username: novoUsuario.username });
   } catch (err) {
     console.log(err)
     if (err.code === 11000) {
@@ -182,6 +189,7 @@ async function mudarSenha(req, res) {
     })
   }catch(err) {
     // TODO: Corrigir erro q por enquanto nn sei qual é, dps eu vejo :P
+    // NOTE: Não posso fazer mais isso, já não lembro qual o erro e nem se ja arrumei, aff
     console.log(err)
     res.status(500).json({
       error: 'Erro durante mudança de senha'
