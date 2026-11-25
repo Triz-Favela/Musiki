@@ -149,7 +149,7 @@ const gerarOTP = () => {
     return code
 }
 
-export function hashRefreshToken(token) {
+function hashRefreshToken(token) {
   return crypto
     .createHmac('sha256', process.env.REFRESH_TOKEN_HASH_SECRET)
     .update(token)
@@ -176,7 +176,4 @@ export {
     autenticaRota,
     atualizaAccessToken,
     enviarOTP,
-
-
-    
 }

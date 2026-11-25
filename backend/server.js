@@ -4,6 +4,7 @@ import express from "express";
 import connectDatabase from "./database/database.js";
 import musicaRoutes from "./routes/musicaRoutes.js";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
+import authRoutes from "./routes/authRoutes.js"
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use('/musicas', musicaRoutes);
 app.use('/usuarios', usuarioRoutes);
+app.use('/auth', authRoutes)
 
 // 404 primeiro
 app.use((req, res) => {
