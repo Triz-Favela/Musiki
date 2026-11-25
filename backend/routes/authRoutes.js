@@ -1,11 +1,10 @@
 import express from "express";
 const router = express.Router();
 
-import { atualizaAccessToken } from "../services/auth";
-import { enviarEmail, checarOTP, mudarSenha } from "../controller/usuarioController";
+import { atualizaAccessToken, enviarOTP, checarOTP, mudarSenha } from "../services/auth.js";
 
 router.post('/refresh', atualizaAccessToken)
-router.post('/enviar-email', enviarEmail);
+router.post('/enviar-email', enviarOTP);
 router.post('/checar-otp', checarOTP);
 router.post('/mudar-senha', mudarSenha);
 

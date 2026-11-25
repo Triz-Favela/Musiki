@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 import RefreshToken from '../models/refreshToken.js';
 import Usuario from '../models/usuario.js';
+import bcrypt from 'bcrypt'
+import crypto from 'crypto'
+
+const SENHA_MINIMA = 6;
+const SENHA_MAXIMA = 72; // o bcrypt só considera os 72 primeiros caracteres
 
 const autenticaRota = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -45,7 +50,7 @@ const atualizaAccessToken = async (req, res) => {
         }
 
         const accessToken = jwt.sign(
-          { id: usuarioEncontrado._id.toString() },
+          { id: refreshTokenValido.userId._id.toString() },
           process.env.JWT_SECRET,
           { expiresIn: '15m' }
         )
@@ -176,4 +181,6 @@ export {
     autenticaRota,
     atualizaAccessToken,
     enviarOTP,
+    checarOTP,
+    mudarSenha
 }

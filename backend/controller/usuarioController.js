@@ -57,11 +57,12 @@ async function cadastrar(req, res) {
 
     const novoUsuario = await Usuario.create(dados);
 
+
     const refreshToken = crypto.randomBytes(32).toString('base64url')
     
     const refreshTokenHash = hashRefreshToken(refreshToken)
     await RefreshToken.create({
-      userID: novoUsuario._id,
+      userId: novoUsuario._id,
       tokenHash: refreshTokenHash,
     })
 

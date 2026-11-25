@@ -3,16 +3,16 @@ import Usuario from '../models/usuario.js';
 
 async function buscarMusicaDoDia(req, res) {
   try {
-    const usuario = await Usuario.findOne({username: req.usuario.username})
+    const usuario = await Usuario.findById(req.usuario.id)
     if(!usuario){
       return res.status(404).json({ error: 'Usuário não existe' })
     }
 
     const hoje = new Date().setHours(0,0,0,0)
-    const ultimoAcesso = usuario.musicaDoDia?.data 
+    const ultimoAcesso = usuario.musicaDoDia?.data
       ? new Date(usuario.musicaDoDia.data).setHours(0, 0, 0, 0) 
       : 0;
-
+    
     if(usuario.musicaDoDia.musica && ultimoAcesso >= hoje){
       await usuario.populate("musicaDoDia.musica")
       const musicaObj = usuario.musicaDoDia.musica.toObject()
@@ -35,8 +35,8 @@ async function buscarMusicaDoDia(req, res) {
       return res.status(404).json({ error: 'Nenhuma música cadastrada' })
     }
     
-    await Usuario.findOneAndUpdate(
-      { username: req.usuario.username },
+    const user = await Usuario.findByIdAndUpdate(
+      req.usuario.id,
       {
         $set: {
           musicaDoDia: {
@@ -57,6 +57,7 @@ async function buscarMusicaDoDia(req, res) {
     return res.status(200).json({musica: musicaLimpa});
 
   } catch (err) {
+    console.log(err)
     res.status(500).json({ error: 'Erro ao buscar música' });
   }
 }
