@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuario.js';
-import { checkChangePassToken, checkOTP, sendEmail } from '../services/mailer.js';
+import RefreshToken from '../models/refreshToken.js';
+import { hashRefreshToken, hashSenha } from '../services/auth.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SENHA_MINIMA = 6;
-const SENHA_MAXIMA = 72; // o bcrypt só considera os 72 primeiros caracteres
 
 // POST /usuarios
 async function cadastrar(req, res) {
@@ -46,7 +46,6 @@ async function cadastrar(req, res) {
       return res.status(409).json({ error: 'Esse email já está em uso' });
     }
 
-    // criptografa a senha (10 = custo do bcrypt)
     const senhaHash = await hashSenha(senha)
 
     if(senhaHash.error){
@@ -56,16 +55,24 @@ async function cadastrar(req, res) {
     const dados = { username: usernameLimpo, senha: senhaHash };
     if (emailLimpo) dados.email = emailLimpo;
 
-    const novo = await Usuario.create(dados);
+    const novoUsuario = await Usuario.create(dados);
 
-    // o token leva só o id e o username, nunca a senha
-    const token = jwt.sign(
-      { id: novo._id.toString(), username: novo.username },
+
+    const refreshToken = crypto.randomBytes(32).toString('base64url')
+    
+    const refreshTokenHash = hashRefreshToken(refreshToken)
+    await RefreshToken.create({
+      userId: novoUsuario._id,
+      tokenHash: refreshTokenHash,
+    })
+
+    const accessToken = jwt.sign(
+      { id: novoUsuario._id.toString() },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+      { expiresIn: '15m' }
+    )
 
-    res.status(201).json({ token, username: novo.username });
+    res.status(201).json({ refreshToken, accessToken, username: novoUsuario.username });
   } catch (err) {
     console.log(err)
     if (err.code === 11000) {
@@ -107,14 +114,21 @@ async function logar(req, res) {
       return res.status(400).json({ error: 'Senha ou usuário incorreto'})
     }
 
+    const refreshToken = crypto.randomBytes(32).toString('base64url')
     
-    const token = jwt.sign(
-      { id: usuarioEncontrado._id.toString(), username: usuarioEncontrado.username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const refreshTokenHash = hashRefreshToken(refreshToken)
+    await RefreshToken.create({
+      userID: usuarioEncontrado._id,
+      tokenHash: refreshTokenHash,
+    })
 
-    res.status(201).json({ token, username: usuarioEncontrado.username });
+    const accessToken = jwt.sign(
+      { id: usuarioEncontrado._id.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+
+    res.status(201).json({ refreshToken, accessToken, username: usuarioEncontrado.username });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'Username ou email já está em uso' });
@@ -123,80 +137,9 @@ async function logar(req, res) {
   }
 }
 
-async function enviarEmail(req, res) {
-  try {
-    const { email } = req.body
-    const usuarioEncontrado = await Usuario.findOne({ email: email })
-    if(!usuarioEncontrado){
-      return res.sendStatus(200)
-    }
-    await sendEmail(email)
-    res.sendStatus(200)
-  } catch(err) {
-    res.status(500).json({ error: 'Erro ao enviar o email' })
-  } 
-}
-
-function checarOTP(req, res) {
-  try{
-    const { email, OTP } = req.body
-    const resultado = checkOTP(email, OTP)
-    if(resultado.ok){
-      res.status(200).json({
-        token: resultado.token
-      })
-    }else{
-      res.status(500).json({
-        error: 'Código enviado incorreto'
-      })
-    }
-  }catch(err){
-    res.status(500).json({
-      error: 'Erro ao verificar código'
-    })
-  }
-}
-
-async function mudarSenha(req, res) {
-  try{
-    const { email, token, novaSenha } = req.body
-    const resultado = checkChangePassToken(email, token)
-    if(resultado.ok){
-      const senhaHash = await hashSenha(novaSenha)
-      if(senhaHash.error){
-        return res.status(500).json({error: senhaHash.error})
-      }
-      await Usuario.findOneAndUpdate({ email: email }, { senha: senhaHash })
-      return res.sendStatus(200)
-    }
-    return res.status(500).json({
-      error: 'Acesso a mudança de senha negado'
-    })
-  }catch(err) {
-    // TODO: Corrigir erro q por enquanto nn sei qual é, dps eu vejo :P
-    console.log(err)
-    res.status(500).json({
-      error: 'Erro durante mudança de senha'
-    })
-  }
-}
-
-async function hashSenha(senha) {
-  // senha: obrigatória, não vazia e com tamanho válido
-  if (typeof senha !== 'string' || !senha.trim()) {
-    return { error: 'O campo "senha" é obrigatório e não pode ser vazio' }
-  }
-  if (senha.length < SENHA_MINIMA || senha.length > SENHA_MAXIMA) {
-    return { error: `A senha deve ter entre ${SENHA_MINIMA} e ${SENHA_MAXIMA} caracteres`,}
-  }
-  return await bcrypt.hash(senha, 10);
-}
 
 export { 
   cadastrar,
-  logar,
-  enviarEmail,
-  checarOTP,
-  mudarSenha
+  logar
 };
 
