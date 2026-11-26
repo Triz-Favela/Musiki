@@ -7,7 +7,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --import ./test/helpers/env.js --test"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -16,5 +16,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.1",
     "nodemailer": "^10.3.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.2"
   }
 }
