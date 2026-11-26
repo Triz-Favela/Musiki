@@ -1,10 +1,10 @@
 {
   "name": "musiki-api",
   "version": "1.0.0",
-  "description": "API de Gestao de tarefas",
+  "description": "Aplicação que entrega ao usuário trechos de música diariamente",
   "license": "ISC",
   "type": "module",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
