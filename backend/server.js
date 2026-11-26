@@ -1,19 +1,19 @@
-require('dotenv').config(); // precisa ser a primeira linha
-
-const express = require('express');
-const connectDatabase = require('./database'); // pra ajustrar o caminho se o arquivo estiver em outra pasta
-const musicaRoutes = require('./routes/musica.routes');
+import { configDotenv } from "dotenv";
+configDotenv()
+import express from "express";
+import connectDatabase from "./database/database.js";
+import musicaRoutes from "./routes/musicaRoutes.js";
+import usuarioRoutes from "./routes/usuarioRoutes.js";
+import authRoutes from "./routes/authRoutes.js"
 
 const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.json({ status: 'Música API' });
-});
-
 app.use('/musicas', musicaRoutes);
+app.use('/usuarios', usuarioRoutes);
+app.use('/auth', authRoutes)
 
 // 404 primeiro
 app.use((req, res) => {
