@@ -40,7 +40,7 @@ async function cadastrar(req, res) {
   try {
     // username ou email já usados?
     if (await Usuario.findOne({ username: usernameLimpo })) {
-      return res.status(200).json({ error: 'Esse username já está em uso' });
+      return res.status(409).json({ error: 'Esse username já está em uso' });
     }
     if (emailLimpo && (await Usuario.findOne({ email: emailLimpo }))) {
       return res.status(409).json({ error: 'Esse email já está em uso' });
